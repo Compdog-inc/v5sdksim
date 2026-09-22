@@ -12,6 +12,21 @@
 #include "pros/misc.hpp"
 #include "pros/device.hpp"
 
+#include "sim/sim_callbacks.h"
+
+namespace pros
+{
+    namespace sim
+    {
+        static std::function<std::vector<pros::aivision_object_s_t>()> ai_vision_callback;
+
+        void register_ai_vision_detection_callback(std::function<std::vector<pros::aivision_object_s_t>()> callback)
+        {
+            ai_vision_callback = callback;
+        }
+    } // namespace sim
+} // namespace pros
+
 // ---------------------------------------------------------------------------
 // C System Timers & Driver Functions (extern "C")
 // ---------------------------------------------------------------------------
@@ -625,54 +640,7 @@ namespace pros
 
         std::vector<pros::aivision_object_s_t> AIVision::get_all_objects()
         {
-            return {
-                pros::aivision_object_s_t{
-                    .id = 1,
-                    .type = E_AIVISION_DETECTED_TAG,
-                    .object = {
-                        .tag = {
-                            pros::aivision_object_tag_s_t{
-                                107, 91, 140, 91, 142, 58, 109, 58},
-                        },
-                    },
-                },
-                pros::aivision_object_s_t{
-                    .id = 1,
-                    .type = E_AIVISION_DETECTED_TAG,
-                    .object = {
-                        .tag = {
-                            pros::aivision_object_tag_s_t{11, 57, 38, 54, 30, 30, 2, 31},
-                        },
-                    },
-                },
-                pros::aivision_object_s_t{
-                    .id = 1,
-                    .type = E_AIVISION_DETECTED_TAG,
-                    .object = {
-                        .tag = {
-                            pros::aivision_object_tag_s_t{107, 236, 129, 216, 114, 195, 90, 213},
-                        },
-                    },
-                },
-                pros::aivision_object_s_t{
-                    .id = 1,
-                    .type = E_AIVISION_DETECTED_TAG,
-                    .object = {
-                        .tag = {
-                            pros::aivision_object_tag_s_t{204, 113, 226, 111, 224, 88, 201, 90},
-                        },
-                    },
-                },
-                pros::aivision_object_s_t{
-                    .id = 1,
-                    .type = E_AIVISION_DETECTED_TAG,
-                    .object = {
-                        .tag = {
-                            pros::aivision_object_tag_s_t{195, 169, 249, 163, 216, 135, 170, 137},
-                        },
-                    },
-                },
-            };
+            return pros::sim::ai_vision_callback ? pros::sim::ai_vision_callback() : std::vector<pros::aivision_object_s_t>();
         }
     } // namespace v5
 } // namespace pros
