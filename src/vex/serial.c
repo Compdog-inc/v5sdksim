@@ -15,19 +15,19 @@ int32_t vexSerialWriteBuffer(uint32_t channel, uint8_t *data, uint32_t data_len)
 int32_t vexSerialReadChar(uint32_t channel)
 {
     // TODO: implement
-    return 0;
+    return -1;
 }
 
 int32_t vexSerialPeekChar(uint32_t channel)
 {
     // TODO: implement
-    return 0;
+    return -1;
 }
 
 int32_t vexSerialWriteFree(uint32_t channel)
 {
     // TODO: implement
-    return 0;
+    return 2048;
 }
 
 void vexDeviceGenericSerialEnable(V5_DeviceT device, int32_t options)
@@ -61,13 +61,13 @@ int32_t vexDeviceGenericSerialTransmit(V5_DeviceT device, uint8_t *buffer, int32
 int32_t vexDeviceGenericSerialReadChar(V5_DeviceT device)
 {
     // TODO: implement
-    return 0;
+    return -1;
 }
 
 int32_t vexDeviceGenericSerialPeekChar(V5_DeviceT device)
 {
     // TODO: implement
-    return 0;
+    return -1;
 }
 
 int32_t vexDeviceGenericSerialReceiveAvail(V5_DeviceT device)
