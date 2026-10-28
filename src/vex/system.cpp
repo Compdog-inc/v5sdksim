@@ -6,13 +6,13 @@ extern "C"
 {
     uint32_t vexSystemTimeGet(void)
     {
-        // TODO: implement
+        // Return current system time in milliseconds since epoch
         return static_cast<uint32_t>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count());
     }
 
     void vexGettime(struct time *pTime)
     {
-        // TODO: implement
+        // Compute time using current system time
         std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
         std::time_t now_c = std::chrono::system_clock::to_time_t(now);
         std::tm *local_time = std::localtime(&now_c);
@@ -24,7 +24,7 @@ extern "C"
 
     void vexGetdate(struct date *pDate)
     {
-        // TODO: implement
+        // Compute date using current system time
         std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
         std::time_t now_c = std::chrono::system_clock::to_time_t(now);
         std::tm *local_time = std::localtime(&now_c);
@@ -35,14 +35,14 @@ extern "C"
 
     uint64_t vexSystemHighResTimeGet(void)
     {
-        // TODO: implement
+        // Return current system time in microseconds since epoch
         return static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count());
     }
 
     uint64_t vexSystemPowerupTimeGet(void)
     {
+        // Return the time in microseconds since this first called
         static auto start_time = std::chrono::steady_clock::now();
-        // TODO: implement
         return static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - start_time).count());
     }
 };

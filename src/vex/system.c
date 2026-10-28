@@ -3,7 +3,9 @@
 // rtos hooks
 void vexSystemTimerStop()
 {
-    // TODO: implement
+    // use this as a startup hook for rtos
+    // load simgui as a dynamic library
+    loadSimExtensions();
 }
 
 void vexSystemTimerClearInterrupt()

@@ -35,3 +35,7 @@ target_compile_options(v5sim
         -Wextra
         -Wpedantic
 )
+
+add_subdirectory(simgui)
+
+target_link_libraries(v5sim PRIVATE simgui_dynamic)
