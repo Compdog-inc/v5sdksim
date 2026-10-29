@@ -1,6 +1,246 @@
 #include "simgui.h"
 #include <format>
 
+#include <imgui_internal.h>
+
+struct SimGuiSettings
+{
+    SDL_Scancode leftXNeg = SDL_SCANCODE_A;
+    SDL_Scancode leftXPos = SDL_SCANCODE_D;
+
+    SDL_Scancode leftYNeg = SDL_SCANCODE_W;
+    SDL_Scancode leftYPos = SDL_SCANCODE_S;
+
+    SDL_Scancode rightXNeg = SDL_SCANCODE_J;
+    SDL_Scancode rightXPos = SDL_SCANCODE_L;
+
+    SDL_Scancode rightYNeg = SDL_SCANCODE_I;
+    SDL_Scancode rightYPos = SDL_SCANCODE_K;
+
+    SDL_Scancode leftButtonUp = SDL_SCANCODE_F;
+    SDL_Scancode leftButtonDown = SDL_SCANCODE_C;
+    SDL_Scancode leftButtonLeft = SDL_SCANCODE_X;
+    SDL_Scancode leftButtonRight = SDL_SCANCODE_V;
+
+    SDL_Scancode rightButtonUp = SDL_SCANCODE_H;
+    SDL_Scancode rightButtonDown = SDL_SCANCODE_N;
+    SDL_Scancode rightButtonLeft = SDL_SCANCODE_B;
+    SDL_Scancode rightButtonRight = SDL_SCANCODE_M;
+
+    SDL_Scancode buttonSelect = SDL_SCANCODE_SPACE;
+
+    SDL_Scancode buttonL1 = SDL_SCANCODE_Q;
+    SDL_Scancode buttonL2 = SDL_SCANCODE_E;
+
+    SDL_Scancode buttonR1 = SDL_SCANCODE_U;
+    SDL_Scancode buttonR2 = SDL_SCANCODE_O;
+};
+
+struct KeyBinding
+{
+    const char *name;
+    SDL_Scancode *key;
+};
+
+static SimGuiSettings settings;
+
+static KeyBinding keyBindings[] = {
+    {"Left X -", &settings.leftXNeg},
+    {"Left X +", &settings.leftXPos},
+    {"Left Y -", &settings.leftYNeg},
+    {"Left Y +", &settings.leftYPos},
+
+    {"Right X -", &settings.rightXNeg},
+    {"Right X +", &settings.rightXPos},
+    {"Right Y -", &settings.rightYNeg},
+    {"Right Y +", &settings.rightYPos},
+
+    {"Up", &settings.leftButtonUp},
+    {"Down", &settings.leftButtonDown},
+    {"Left", &settings.leftButtonLeft},
+    {"Right", &settings.leftButtonRight},
+
+    {"X", &settings.rightButtonUp},
+    {"B", &settings.rightButtonDown},
+    {"Y", &settings.rightButtonLeft},
+    {"A", &settings.rightButtonRight},
+
+    {"Select", &settings.buttonSelect},
+    {"L1", &settings.buttonL1},
+    {"L2", &settings.buttonL2},
+    {"R1", &settings.buttonR1},
+    {"R2", &settings.buttonR2},
+};
+
+static int waitingForKey = -1;
+
+static void ReadInit(ImGuiContext *, ImGuiSettingsHandler *) {}
+
+static void *ReadOpen(
+    ImGuiContext *, ImGuiSettingsHandler *handler,
+    const char *name)
+{
+    return strcmp(name, "Settings") == 0
+               ? handler->UserData
+               : nullptr;
+}
+
+template <std::size_t N, std::size_t M>
+consteval auto concat(const char (&a)[N], const char (&b)[M])
+{
+    struct Result
+    {
+        char value[N + M - 1]{};
+
+        constexpr const char *c_str() const { return value; }
+    };
+
+    Result result{};
+
+    for (std::size_t i = 0; i < N - 1; ++i)
+        result.value[i] = a[i];
+
+    for (std::size_t i = 0; i < M; ++i)
+        result.value[N - 1 + i] = b[i];
+
+    return result;
+}
+
+template <bool AddNewLine = false, std::size_t N>
+consteval auto concatFormatString(const char (&format)[N])
+{
+    if constexpr (AddNewLine)
+        return concat(format, std::is_unsigned_v<std::underlying_type_t<SDL_Scancode>> ? "%u\n" : "%d\n");
+    else
+        return concat(format, std::is_unsigned_v<std::underlying_type_t<SDL_Scancode>> ? "%u\0" : "%d\0");
+}
+
+static void ReadLine(
+    ImGuiContext *, ImGuiSettingsHandler *,
+    void *entry, const char *line)
+{
+    auto *s = static_cast<SimGuiSettings *>(entry);
+
+    if (sscanf(line, concatFormatString("LeftXNeg=").c_str(), &s->leftXNeg) == 1)
+        return;
+
+    if (sscanf(line, concatFormatString("LeftXPos=").c_str(), &s->leftXPos) == 1)
+        return;
+
+    if (sscanf(line, concatFormatString("LeftYNeg=").c_str(), &s->leftYNeg) == 1)
+        return;
+
+    if (sscanf(line, concatFormatString("LeftYPos=").c_str(), &s->leftYPos) == 1)
+        return;
+
+    if (sscanf(line, concatFormatString("RightXNeg=").c_str(), &s->rightXNeg) == 1)
+        return;
+
+    if (sscanf(line, concatFormatString("RightXPos=").c_str(), &s->rightXPos) == 1)
+        return;
+
+    if (sscanf(line, concatFormatString("RightYNeg=").c_str(), &s->rightYNeg) == 1)
+        return;
+
+    if (sscanf(line, concatFormatString("RightYPos=").c_str(), &s->rightYPos) == 1)
+        return;
+
+    if (sscanf(line, concatFormatString("LeftButtonUp=").c_str(), &s->leftButtonUp) == 1)
+        return;
+
+    if (sscanf(line, concatFormatString("LeftButtonDown=").c_str(), &s->leftButtonDown) == 1)
+        return;
+
+    if (sscanf(line, concatFormatString("LeftButtonLeft=").c_str(), &s->leftButtonLeft) == 1)
+        return;
+
+    if (sscanf(line, concatFormatString("LeftButtonRight=").c_str(), &s->leftButtonRight) == 1)
+        return;
+
+    if (sscanf(line, concatFormatString("RightButtonUp=").c_str(), &s->rightButtonUp) == 1)
+        return;
+
+    if (sscanf(line, concatFormatString("RightButtonDown=").c_str(), &s->rightButtonDown) == 1)
+        return;
+
+    if (sscanf(line, concatFormatString("RightButtonLeft=").c_str(), &s->rightButtonLeft) == 1)
+        return;
+
+    if (sscanf(line, concatFormatString("RightButtonRight=").c_str(), &s->rightButtonRight) == 1)
+        return;
+
+    if (sscanf(line, concatFormatString("ButtonSelect=").c_str(), &s->buttonSelect) == 1)
+        return;
+
+    if (sscanf(line, concatFormatString("ButtonL1=").c_str(), &s->buttonL1) == 1)
+        return;
+
+    if (sscanf(line, concatFormatString("ButtonL2=").c_str(), &s->buttonL2) == 1)
+        return;
+
+    if (sscanf(line, concatFormatString("ButtonR1=").c_str(), &s->buttonR1) == 1)
+        return;
+
+    if (sscanf(line, concatFormatString("ButtonR2=").c_str(), &s->buttonR2) == 1)
+        return;
+}
+
+static void ApplyAll(ImGuiContext *, ImGuiSettingsHandler *) {}
+
+static void ClearAll(
+    ImGuiContext *, ImGuiSettingsHandler *handler)
+{
+    *static_cast<SimGuiSettings *>(handler->UserData) = {};
+}
+
+static void WriteAll(
+    ImGuiContext *, ImGuiSettingsHandler *handler,
+    ImGuiTextBuffer *buf)
+{
+    const auto *s =
+        static_cast<const SimGuiSettings *>(handler->UserData);
+
+    buf->appendf("[SimGui][Settings]\n");
+    buf->appendf(concatFormatString<true>("LeftXNeg=").c_str(),
+                 s->leftXNeg);
+    buf->appendf("LeftXPos=%d\n", s->leftXPos);
+    buf->appendf("LeftYNeg=%d\n", s->leftYNeg);
+    buf->appendf("LeftYPos=%d\n", s->leftYPos);
+    buf->appendf("RightXNeg=%d\n", s->rightXNeg);
+    buf->appendf("RightXPos=%d\n", s->rightXPos);
+    buf->appendf("RightYNeg=%d\n", s->rightYNeg);
+    buf->appendf("RightYPos=%d\n", s->rightYPos);
+    buf->appendf("LeftButtonUp=%d\n", s->leftButtonUp);
+    buf->appendf("LeftButtonDown=%d\n", s->leftButtonDown);
+    buf->appendf("LeftButtonLeft=%d\n", s->leftButtonLeft);
+    buf->appendf("LeftButtonRight=%d\n", s->leftButtonRight);
+    buf->appendf("RightButtonUp=%d\n", s->rightButtonUp);
+    buf->appendf("RightButtonDown=%d\n", s->rightButtonDown);
+    buf->appendf("RightButtonLeft=%d\n", s->rightButtonLeft);
+    buf->appendf("RightButtonRight=%d\n", s->rightButtonRight);
+    buf->appendf("ButtonSelect=%d\n", s->buttonSelect);
+    buf->appendf("ButtonL1=%d\n", s->buttonL1);
+    buf->appendf("ButtonL2=%d\n", s->buttonL2);
+    buf->appendf("ButtonR1=%d\n", s->buttonR1);
+    buf->appendf("ButtonR2=%d\n\n", s->buttonR2);
+}
+
+static void RegisterSettings()
+{
+    ImGuiSettingsHandler h;
+    h.TypeName = "SimGui";
+    h.TypeHash = ImHashStr("SimGui");
+    h.UserData = &settings;
+    h.ReadInitFn = ReadInit;
+    h.ReadOpenFn = ReadOpen;
+    h.ReadLineFn = ReadLine;
+    h.ApplyAllFn = ApplyAll;
+    h.WriteAllFn = WriteAll;
+    h.ClearAllFn = ClearAll;
+
+    ImGui::AddSettingsHandler(&h);
+}
+
 static float NormalizeStick(Sint16 value)
 {
     const float result = value < 0
@@ -219,6 +459,247 @@ static void DrawController(const ControllerState &s)
     ImGui::Dummy(canvasSize);
 }
 
+static void HandleKeyBindingEvent(const SDL_Event &event)
+{
+    if (waitingForKey < 0)
+        return;
+
+    if (event.type != SDL_EVENT_KEY_DOWN)
+        return;
+
+    if (event.key.repeat)
+        return;
+
+    if (event.key.scancode == SDL_SCANCODE_ESCAPE)
+    {
+        waitingForKey = -1;
+        return;
+    }
+
+    *keyBindings[waitingForKey].key = event.key.scancode;
+    ImGui::MarkIniSettingsDirty();
+    waitingForKey = -1;
+}
+
+static bool IsKeyDown(
+    const bool *keyboard,
+    int keyCount,
+    SDL_Scancode key)
+{
+    const int index = static_cast<int>(key);
+
+    return key != SDL_SCANCODE_UNKNOWN &&
+           index >= 0 &&
+           index < keyCount &&
+           keyboard[index];
+}
+
+static void HandleKeyboardButton(
+    bool &button,
+    const bool *keyboard,
+    int keyCount,
+    SDL_Scancode key)
+{
+    button = button || IsKeyDown(keyboard, keyCount, key);
+}
+
+static void HandleKeyboardAxis(
+    float &axis,
+    float gamepadAxis,
+    const bool *keyboard,
+    int keyCount,
+    SDL_Scancode negative,
+    SDL_Scancode positive,
+    float deltaTime,
+    float response = 18.0f)
+{
+    const bool neg = IsKeyDown(keyboard, keyCount, negative);
+    const bool pos = IsKeyDown(keyboard, keyCount, positive);
+
+    float target = gamepadAxis;
+
+    if (neg != pos)
+        target = neg ? -1.0f : 1.0f;
+
+    const float blend = 1.0f - std::exp(-response * deltaTime);
+
+    axis += (target - axis) * blend;
+
+    axis = std::clamp(axis, -1.0f, 1.0f);
+}
+
+static void ApplyKeyboardInput(
+    ControllerState &state,
+    const ControllerState &gamepadState,
+    float deltaTime)
+{
+    if (waitingForKey >= 0)
+        return;
+
+    int keyCount = 0;
+    const bool *keyboard = SDL_GetKeyboardState(&keyCount);
+
+    // Left stick
+    HandleKeyboardAxis(
+        state.left.x,
+        gamepadState.left.x,
+        keyboard, keyCount,
+        settings.leftXNeg,
+        settings.leftXPos,
+        deltaTime);
+
+    HandleKeyboardAxis(
+        state.left.y,
+        gamepadState.left.y,
+        keyboard, keyCount,
+        settings.leftYNeg,
+        settings.leftYPos,
+        deltaTime);
+
+    // Right stick
+    HandleKeyboardAxis(
+        state.right.x,
+        gamepadState.right.x,
+        keyboard, keyCount,
+        settings.rightXNeg,
+        settings.rightXPos,
+        deltaTime);
+
+    HandleKeyboardAxis(
+        state.right.y,
+        gamepadState.right.y,
+        keyboard, keyCount,
+        settings.rightYNeg,
+        settings.rightYPos,
+        deltaTime);
+
+    // Left buttons
+    HandleKeyboardButton(
+        state.buttons[SDL_GAMEPAD_BUTTON_DPAD_UP],
+        keyboard, keyCount, settings.leftButtonUp);
+
+    HandleKeyboardButton(
+        state.buttons[SDL_GAMEPAD_BUTTON_DPAD_DOWN],
+        keyboard, keyCount, settings.leftButtonDown);
+
+    HandleKeyboardButton(
+        state.buttons[SDL_GAMEPAD_BUTTON_DPAD_LEFT],
+        keyboard, keyCount, settings.leftButtonLeft);
+
+    HandleKeyboardButton(
+        state.buttons[SDL_GAMEPAD_BUTTON_DPAD_RIGHT],
+        keyboard, keyCount, settings.leftButtonRight);
+
+    // Right buttons
+    HandleKeyboardButton(
+        state.buttons[SDL_GAMEPAD_BUTTON_NORTH],
+        keyboard, keyCount, settings.rightButtonUp);
+
+    HandleKeyboardButton(
+        state.buttons[SDL_GAMEPAD_BUTTON_SOUTH],
+        keyboard, keyCount, settings.rightButtonDown);
+
+    HandleKeyboardButton(
+        state.buttons[SDL_GAMEPAD_BUTTON_WEST],
+        keyboard, keyCount, settings.rightButtonLeft);
+
+    HandleKeyboardButton(
+        state.buttons[SDL_GAMEPAD_BUTTON_EAST],
+        keyboard, keyCount, settings.rightButtonRight);
+
+    // Select
+    HandleKeyboardButton(
+        state.buttons[SDL_GAMEPAD_BUTTON_GUIDE],
+        keyboard, keyCount, settings.buttonSelect);
+
+    // Top shoulders
+    HandleKeyboardButton(
+        state.buttons[SDL_GAMEPAD_BUTTON_LEFT_SHOULDER],
+        keyboard, keyCount, settings.buttonL1);
+
+    HandleKeyboardButton(
+        state.buttons[SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER],
+        keyboard, keyCount, settings.buttonR1);
+
+    // Bottom triggers
+
+    state.leftTrigger =
+        IsKeyDown(keyboard, keyCount, settings.buttonL2)
+            ? 1.0f
+            : gamepadState.leftTrigger;
+
+    state.rightTrigger =
+        IsKeyDown(keyboard, keyCount, settings.buttonR2)
+            ? 1.0f
+            : gamepadState.rightTrigger;
+}
+
+static void DrawKeyBindings()
+{
+    if (ImGui::BeginTable(
+            "KeyBindingsTable", 2,
+            ImGuiTableFlags_BordersInnerV |
+                ImGuiTableFlags_RowBg |
+                ImGuiTableFlags_SizingStretchProp))
+    {
+        ImGui::TableSetupColumn("Action",
+                                ImGuiTableColumnFlags_WidthStretch);
+        ImGui::TableSetupColumn("Key",
+                                ImGuiTableColumnFlags_WidthFixed, 160.0f);
+        ImGui::TableHeadersRow();
+
+        for (int i = 0;
+             i < static_cast<int>(
+                     sizeof(keyBindings) / sizeof(keyBindings[0]));
+             ++i)
+        {
+            ImGui::TableNextRow();
+
+            ImGui::TableSetColumnIndex(0);
+            ImGui::AlignTextToFramePadding();
+            ImGui::TextUnformatted(keyBindings[i].name);
+
+            ImGui::TableSetColumnIndex(1);
+
+            const bool waiting = waitingForKey == i;
+
+            char label[128];
+
+            if (waiting)
+            {
+                std::snprintf(label, sizeof(label),
+                              "...##key%d", i);
+            }
+            else
+            {
+                const char *keyName =
+                    SDL_GetScancodeName(*keyBindings[i].key);
+
+                if (!keyName || keyName[0] == '\0')
+                    keyName = "???";
+
+                std::snprintf(label, sizeof(label),
+                              "%s##key%d", keyName, i);
+            }
+
+            ImGui::SetNextItemWidth(-1.0f);
+
+            if (waiting)
+                ImGui::PushStyleColor(
+                    ImGuiCol_Button,
+                    ImVec4(0.55f, 0.30f, 0.08f, 1.0f));
+
+            if (ImGui::Button(label, ImVec2(-1.0f, 0.0f)))
+                waitingForKey = waiting ? -1 : i;
+
+            if (waiting)
+                ImGui::PopStyleColor();
+        }
+
+        ImGui::EndTable();
+    }
+}
+
 static GamepadPtr OpenFirstGamepad()
 {
     int count = 0;
@@ -245,9 +726,17 @@ static GamepadPtr OpenFirstGamepad()
 
 void frame(GamepadPtr &gamepad, ControllerState &state)
 {
+    ImGui::SetNextWindowSize(ImVec2(800, 520), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(std::format("Controller - {0}###Controller", gamepad ? SDL_GetGamepadName(gamepad.get()) : "Not Connected").c_str(), nullptr))
     {
         DrawController(state);
+    }
+    ImGui::End();
+
+    ImGui::SetNextWindowSize(ImVec2(400, 820), ImGuiCond_FirstUseEver);
+    if (ImGui::Begin("Key Bindings", nullptr))
+    {
+        DrawKeyBindings();
     }
     ImGui::End();
 }
@@ -293,11 +782,14 @@ int runGui()
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
+    RegisterSettings();
     ImGuiIO &io = ImGui::GetIO();
     (void)io;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
     io.ConfigDpiScaleFonts = true;                        // Enable automatic DPI scaling of fonts based on monitor DPI
     io.ConfigDpiScaleViewports = true;                    // Enable automatic DPI scaling of viewports based on monitor DPI
+    io.IniFilename = "simgui.ini";
+    ImGui::LoadIniSettingsFromDisk(io.IniFilename);
 
     // Setup Dear ImGui style
     ImGuiStyle &style = ImGui::GetStyle();
@@ -349,23 +841,18 @@ int runGui()
                 }
             }
 
-            if (event.type == SDL_EVENT_KEY_DOWN || event.type == SDL_EVENT_KEY_UP)
-            {
-                switch (event.key.key)
-                {
-                case SDLK_W:
-                    break;
-                case SDLK_S:
-                    break;
-                case SDLK_A:
-                    break;
-                case SDLK_D:
-                    break;
-                }
-            }
+            HandleKeyBindingEvent(event);
         }
 
-        ReadController(gamepad.get(), state);
+        ControllerState gamepadState;
+        if (gamepad)
+        {
+            ReadController(gamepad.get(), gamepadState);
+        }
+
+        state.buttons = gamepadState.buttons;
+
+        ApplyKeyboardInput(state, gamepadState, io.DeltaTime);
 
 #ifdef AS_LIBRARY
 

@@ -87,4 +87,4 @@ vcpkg_installed/
 Testing/
 .cache/
 
-imgui.ini
+simgui.ini
