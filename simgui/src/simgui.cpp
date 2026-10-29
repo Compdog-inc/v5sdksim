@@ -3,6 +3,35 @@
 
 #include <imgui_internal.h>
 
+enum class CompetitionMode
+{
+    Disabled,
+    Autonomous,
+    Teleop,
+    Count
+};
+
+struct CompetitionState
+{
+    CompetitionMode mode = CompetitionMode::Teleop;
+    bool connected = false;
+};
+
+std::string competitionStateToString(CompetitionMode state)
+{
+    switch (state)
+    {
+    case CompetitionMode::Disabled:
+        return "Disabled";
+    case CompetitionMode::Autonomous:
+        return "Autonomous";
+    case CompetitionMode::Teleop:
+        return "Teleop";
+    default:
+        return "Unknown";
+    }
+}
+
 struct SimGuiSettings
 {
     SDL_Scancode leftXNeg = SDL_SCANCODE_A;
@@ -724,12 +753,79 @@ static GamepadPtr OpenFirstGamepad()
     return result;
 }
 
-void frame(GamepadPtr &gamepad, ControllerState &state)
+void DrawCompetitionState(CompetitionState &competitionState)
+{
+    if (ImGui::BeginCombo("Competition State", competitionStateToString(competitionState.mode).c_str()))
+    {
+        for (int i = 0; i < static_cast<int>(CompetitionMode::Count); ++i)
+        {
+            const CompetitionMode mode = static_cast<CompetitionMode>(i);
+            const bool selected = (mode == competitionState.mode);
+
+            if (ImGui::Selectable(competitionStateToString(mode).c_str(), selected))
+            {
+                competitionState.mode = mode;
+            }
+
+            if (selected)
+                ImGui::SetItemDefaultFocus();
+        }
+
+        ImGui::EndCombo();
+    }
+
+    ImGui::Checkbox("Field Control Connected", &competitionState.connected);
+}
+
+#ifdef AS_LIBRARY
+CompetitionState getCompetitionState()
+{
+    CompetitionMode mode;
+
+    uint32_t status = vexCompetitionStatus();
+    if (status & V5_COMP_BIT_EBL)
+    {
+        mode = CompetitionMode::Disabled;
+    }
+    else if (status & V5_COMP_BIT_MODE)
+    {
+        mode = CompetitionMode::Autonomous;
+    }
+    else
+    {
+        mode = CompetitionMode::Teleop;
+    }
+
+    return CompetitionState{mode, (status & V5_COMP_BIT_COMP) != 0};
+}
+
+void setCompetitionState(CompetitionState state)
+{
+    uint32_t status = 0;
+    if (state.mode == CompetitionMode::Disabled)
+    {
+        status |= V5_COMP_BIT_EBL;
+    }
+    else if (state.mode == CompetitionMode::Autonomous)
+    {
+        status |= V5_COMP_BIT_MODE;
+    }
+
+    if (state.connected)
+    {
+        status |= V5_COMP_BIT_COMP;
+    }
+
+    vexSimCompetitionStatusSet(status);
+}
+#endif
+
+void frame(GamepadPtr &gamepad, ControllerState &controllerState, CompetitionState &competitionState)
 {
     ImGui::SetNextWindowSize(ImVec2(800, 520), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(std::format("Controller - {0}###Controller", gamepad ? SDL_GetGamepadName(gamepad.get()) : "Not Connected").c_str(), nullptr))
     {
-        DrawController(state);
+        DrawController(controllerState);
     }
     ImGui::End();
 
@@ -737,6 +833,13 @@ void frame(GamepadPtr &gamepad, ControllerState &state)
     if (ImGui::Begin("Key Bindings", nullptr))
     {
         DrawKeyBindings();
+    }
+    ImGui::End();
+
+    ImGui::SetNextWindowSize(ImVec2(400, 200), ImGuiCond_FirstUseEver);
+    if (ImGui::Begin("Competition State", nullptr))
+    {
+        DrawCompetitionState(competitionState);
     }
     ImGui::End();
 }
@@ -816,6 +919,8 @@ int runGui()
     GamepadPtr gamepad = OpenFirstGamepad();
     ControllerState state;
 
+    CompetitionState competitionState;
+
     bool done = false;
     while (!done)
     {
@@ -882,6 +987,8 @@ int runGui()
 
         vexSimControllerSet(kControllerMaster, BatteryLevel, 100);
         vexSimControllerSet(kControllerMaster, BatteryCapacity, 100);
+
+        competitionState = getCompetitionState();
 #endif
 
         if (SDL_GetWindowFlags(window) & SDL_WINDOW_MINIMIZED)
@@ -895,7 +1002,11 @@ int runGui()
         ImGui_ImplSDL3_NewFrame();
         ImGui::NewFrame();
 
-        frame(gamepad, state);
+        frame(gamepad, state, competitionState);
+
+#ifdef AS_LIBRARY
+        setCompetitionState(competitionState);
+#endif
 
         // Rendering
         ImGui::Render();

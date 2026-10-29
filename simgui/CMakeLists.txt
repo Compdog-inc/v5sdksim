@@ -92,6 +92,8 @@ set_target_properties(simgui_dynamic PROPERTIES
 target_link_libraries(simgui_dynamic PUBLIC
     imgui
     SDL3::SDL3
+    # DO NOT LINK v5sim!!!
+    # IT NEEDS TO GET THE FUNCTION TABLES FROM THE MAIN ROBOT CODE
 )
 
 target_include_directories(simgui_dynamic PUBLIC

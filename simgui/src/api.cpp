@@ -42,3 +42,20 @@ SIMGUI_EXTERN_C void vexSimControllerConnectionStatusSet(V5_ControllerId id, V5_
         functionTable->vexSimControllerConnectionStatusSet(id, status);
     }
 }
+
+SIMGUI_EXTERN_C void vexSimCompetitionStatusSet(uint32_t status)
+{
+    if (functionTable && functionTable->vexSimCompetitionStatusSet)
+    {
+        functionTable->vexSimCompetitionStatusSet(status);
+    }
+}
+
+SIMGUI_EXTERN_C uint32_t vexCompetitionStatus(void)
+{
+    if (functionTable && functionTable->vexCompetitionStatus)
+    {
+        return functionTable->vexCompetitionStatus();
+    }
+    return 0;
+}

@@ -23,6 +23,8 @@ extern "C"
     void vexSimControllerSet(V5_ControllerId id, V5_ControllerIndex index, int32_t value);
     void vexSimControllerConnectionStatusSet(V5_ControllerId id, V5_ControllerStatus status);
 
+    void vexSimCompetitionStatusSet(uint32_t status);
+
 #ifdef __cplusplus
 }
 #endif

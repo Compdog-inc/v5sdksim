@@ -29,6 +29,8 @@ struct SimFunctionTable
 {
     void (*vexSimControllerSet)(V5_ControllerId, V5_ControllerIndex, int32_t);
     void (*vexSimControllerConnectionStatusSet)(V5_ControllerId, V5_ControllerStatus);
+    void (*vexSimCompetitionStatusSet)(uint32_t);
+    uint32_t (*vexCompetitionStatus)(void);
 };
 
 SIMGUI_EXTERN_C SIMGUI_API int SIMGUI_CALL loadFunctionTable(SimFunctionTable *functionTable);
