@@ -110,6 +110,7 @@ void loadSimExtensions()
         functionTable->vexSimControllerConnectionStatusSet = vexSimControllerConnectionStatusSet;
         functionTable->vexSimCompetitionStatusSet = vexSimCompetitionStatusSet;
         functionTable->vexCompetitionStatus = vexCompetitionStatus;
+        functionTable->vexDevicesGet = vexDevicesGet;
     }
 
     auto &plugin = simExtensions.emplace_back();

@@ -59,3 +59,12 @@ SIMGUI_EXTERN_C uint32_t vexCompetitionStatus(void)
     }
     return 0;
 }
+
+SIMGUI_EXTERN_C V5_DeviceT vexDevicesGet(void)
+{
+    if (functionTable && functionTable->vexDevicesGet)
+    {
+        return functionTable->vexDevicesGet();
+    }
+    return NULL;
+}

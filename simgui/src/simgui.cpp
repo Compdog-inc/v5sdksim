@@ -474,8 +474,8 @@ static void DrawController(const ControllerState &s)
                                 ? Blue
                                 : IM_COL32(38, 45, 58, 255);
 
-    RoundedRect(dl, origin.x + 881 * scale, origin.y + 355 * scale, 60, 40, backFill, BodyEdge, 8.0f);
-    RoundedRect(dl, origin.x + 1041 * scale, origin.y + 355 * scale, 60, 40, startFill, BodyEdge, 8.0f);
+    RoundedRect(dl, origin.x + 881 * scale, origin.y + 355 * scale, 90 * scale, 60 * scale, backFill, BodyEdge, 8.0f);
+    RoundedRect(dl, origin.x + 1041 * scale, origin.y + 355 * scale, 90 * scale, 60 * scale, startFill, BodyEdge, 8.0f);
 
     Circle(dl, origin.x + 961 * scale, origin.y + 688 * scale, 51 * scale,
            pressed(SDL_GAMEPAD_BUTTON_GUIDE)
@@ -755,7 +755,10 @@ static GamepadPtr OpenFirstGamepad()
 
 void DrawCompetitionState(CompetitionState &competitionState)
 {
-    if (ImGui::BeginCombo("Competition State", competitionStateToString(competitionState.mode).c_str()))
+    ImGui::TextUnformatted("Competition Mode");
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(200);
+    if (ImGui::BeginCombo("##Competition State", competitionStateToString(competitionState.mode).c_str()))
     {
         for (int i = 0; i < static_cast<int>(CompetitionMode::Count); ++i)
         {
@@ -820,28 +823,335 @@ void setCompetitionState(CompetitionState state)
 }
 #endif
 
+constexpr std::string deviceTypeToString(const V5_Device &device)
+{
+    switch (device.type)
+    {
+    case kDeviceTypeNoSensor:
+        return "None";
+    case kDeviceTypeMotorSensor:
+#ifdef AS_LIBRARY
+        if (device.motor.motorType == 0)
+        {
+            return "V5 Smart Motor (11W)";
+        }
+        else if (device.motor.motorType == 1)
+        {
+            return "V5 Smart Motor (5.5W)";
+        }
+#endif
+        return "V5 Smart Motor";
+    case kDeviceTypeLedSensor:
+        return "LED";
+    case kDeviceTypeAbsEncSensor:
+        return "Rotation Sensor";
+    case kDeviceTypeCrMotorSensor:
+        return "V5 Motor CR";
+    case kDeviceTypeImuSensor:
+        return "Inertial Sensor";
+    case kDeviceTypeDistanceSensor:
+        return "Distance Sensor";
+    case kDeviceTypeRadioSensor:
+        return "Radio";
+    case kDeviceTypeTetherSensor:
+        return "Master Controller";
+    case kDeviceTypeBrainSensor:
+        return "Brain";
+    case kDeviceTypeVisionSensor:
+        return "Vision Sensor";
+    case kDeviceTypeAdiSensor:
+        return "ADI";
+    case kDeviceTypeRes1Sensor:
+        return "Partner Controller";
+    case kDeviceTypeRes2Sensor:
+        return "Battery";
+    case kDeviceTypeRes3Sensor:
+        return "Solenoid";
+    case kDeviceTypeOpticalSensor:
+        return "Optical Sensor";
+    case kDeviceTypeMagnetSensor:
+        return "Electromagnet";
+    case kDeviceTypeGpsSensor:
+        return "GPS";
+    case kDeviceTypeAicameraSensor:
+        return "AI Stereo Camera";
+    case kDeviceTypeLightTowerSensor:
+        return "CTE Workcell Light Tower";
+    case kDeviceTypeArmDevice:
+        return "CTE Workcell Arm";
+    case kDeviceTypeAiVisionSensor:
+        return "AI Vision Sensor";
+    case kDeviceTypePneumaticSensor:
+        return "CTE Workcell Pneumatics";
+    case kDeviceTypeMC55MotorSensor:
+        return "MC55 Motor";
+    case kDeviceTypeBumperSensor:
+        return "Bumper Sensor";
+    case kDeviceTypeGyroSensor:
+        return "Gyro Sensor";
+    case kDeviceTypeSonarSensor:
+        return "Sonar Sensor";
+    case kDeviceTypeGenericSensor:
+        return "Generic Sensor";
+    case kDeviceTypeGenericSerial:
+        return "Generic Serial";
+    default:
+        return "Unknown";
+    }
+}
+
+constexpr std::string V5MotorControlModeToString(const V5MotorControlMode &mode)
+{
+    switch (mode)
+    {
+    case kMotorControlModeOFF:
+        return "Off";
+    case kMotorControlModeBRAKE:
+        return "Brake";
+    case kMotorControlModeHOLD:
+        return "Hold";
+    case kMotorControlModeSERVO:
+        return "Servo";
+    case kMotorControlModePROFILE:
+        return "Profile";
+    case kMotorControlModeVELOCITY:
+        return "Velocity";
+    default:
+        return "Undefined";
+    }
+}
+
+constexpr std::string V5MotorBrakeModeToString(const V5MotorBrakeMode &mode)
+{
+    switch (mode)
+    {
+    case kV5MotorBrakeModeCoast:
+        return "Coast";
+    case kV5MotorBrakeModeBrake:
+        return "Brake";
+    case kV5MotorBrakeModeHold:
+        return "Hold";
+    default:
+        return "Unknown";
+    }
+}
+
+constexpr std::string V5MotorEncoderUnitsToString(const V5MotorEncoderUnits &units)
+{
+    switch (units)
+    {
+    case kMotorEncoderCounts:
+        return "Counts";
+    case kMotorEncoderDegrees:
+        return "Degrees";
+    case kMotorEncoderRotations:
+        return "Rotations";
+    default:
+        return "Unknown";
+    }
+}
+
+constexpr std::string V5MotorGearsetToString(const V5MotorGearset &gearset)
+{
+    switch (gearset)
+    {
+    case kMotorGearSet_36:
+        return "36:1 (Red)";
+    case kMotorGearSet_18:
+        return "18:1 (Green)";
+    case kMotorGearSet_06:
+        return "6:1 (Blue)";
+    default:
+        return "Unknown";
+    }
+}
+
+constexpr std::string V5MotorChassisOrientationToString(const V5_MotorChassisOrientation &orientation)
+{
+    switch (orientation)
+    {
+    case kMotorChassisOrientationCounterClockwisePositive:
+        return "CCW+";
+    case kMotorChassisOrientationClockwisePositive:
+        return "CW+";
+    default:
+        return "Unknown";
+    }
+}
+
+void DrawDeviceList(V5_DeviceT devices)
+{
+    if (devices == nullptr)
+    {
+        return;
+    }
+
+    for (int i = 0; i < V5_MAX_DEVICE_PORTS; ++i)
+    {
+        const V5_Device &device = devices[i];
+        if (device.type == kDeviceTypeNoSensor)
+        {
+            continue;
+        }
+
+        if (ImGui::CollapsingHeader(std::format("[{0}] {1} ({2})###device_{0}", i + 1, deviceTypeToString(device), strlen(device.name) > 0 ? device.name : "<Unnamed>").c_str()))
+        {
+            ImGui::Text("Port: %d", i + 1);
+
+            ImGui::Text("Type: %s", deviceTypeToString(device).c_str());
+
+            ImGui::TextUnformatted("Name");
+            ImGui::SameLine();
+            ImGui::InputText(std::format("##Name{}", i).c_str(), const_cast<char *>(device.name), sizeof(device.name) / sizeof(char));
+
+            switch (device.type)
+            {
+            case kDeviceTypeMotorSensor:
+            {
+                ImGui::Text("Control mode: %s", V5MotorControlModeToString(device.motor.controlMode).c_str());
+                ImGui::Text("Brake mode: %s", V5MotorBrakeModeToString(device.motor.brakeMode).c_str());
+                ImGui::Text("Encoder units: %s", V5MotorEncoderUnitsToString(device.motor.encoderUnits).c_str());
+                ImGui::Text("Gearset: %s", V5MotorGearsetToString(device.motor.gearing).c_str());
+                ImGui::Text("Orientation: %s", V5MotorChassisOrientationToString(device.motor.orientation).c_str());
+
+                ImGui::Separator();
+
+                ImGui::Text("Flags: %s", std::format("0x{:08X}", device.motor.flags).c_str());
+                ImGui::Text("Faults: %s", std::format("0x{:08X}", device.motor.faults).c_str());
+
+                ImGui::Separator();
+
+                ImGui::Text("Current limit: %d mA", device.motor.currentLimit);
+                ImGui::Text("Voltage limit: %d mV", device.motor.voltageLimit);
+
+                ImGui::Separator();
+
+                ImGui::Text("Supply voltage: %d mV", device.motor.supplyVoltage);
+                ImGui::Text("Motor voltage: %d mV", device.motor.motorVoltage);
+                ImGui::Text("Motor current: %d mA", device.motor.motorCurrent);
+
+                ImGui::Separator();
+
+                ImGui::Text("Raw rotor position: %d", device.motor.rawRotorPosition);
+                ImGui::Text("Rotor velocity: %0.4f", device.motor.rotorVelocity);
+                ImGui::Text("Rotor acceleration: %0.4f", device.motor.rotorAcceleration);
+            }
+            break;
+            }
+        }
+    }
+}
+
+static bool showControllerWindow = true;
+static bool showKeyBindingsWindow = true;
+static bool showCompetitionStateWindow = true;
+static bool showDeviceListWindow = true;
+
+void DrawMenuBar()
+{
+    if (ImGui::BeginMainMenuBar())
+    {
+        if (ImGui::BeginMenu("Simulation"))
+        {
+            if (ImGui::MenuItem("Device List", nullptr, showDeviceListWindow))
+            {
+                showDeviceListWindow = !showDeviceListWindow;
+            }
+
+            if (ImGui::MenuItem("Exit"))
+            {
+                SDL_Event quitEvent;
+                quitEvent.type = SDL_EVENT_QUIT;
+                SDL_PushEvent(&quitEvent);
+            }
+
+            ImGui::EndMenu();
+        }
+
+        if (ImGui::BeginMenu("Input"))
+        {
+            if (ImGui::MenuItem("Controller", nullptr, showControllerWindow))
+            {
+                showControllerWindow = !showControllerWindow;
+            }
+
+            if (ImGui::MenuItem("Key Bindings", nullptr, showKeyBindingsWindow))
+            {
+                showKeyBindingsWindow = !showKeyBindingsWindow;
+            }
+
+            if (ImGui::MenuItem("Reset Key Bindings"))
+            {
+                settings = {};
+                ImGui::MarkIniSettingsDirty();
+            }
+
+            ImGui::EndMenu();
+        }
+
+        if (ImGui::BeginMenu("Competition"))
+        {
+            if (ImGui::MenuItem("Competition State", nullptr, showCompetitionStateWindow))
+            {
+                showCompetitionStateWindow = !showCompetitionStateWindow;
+            }
+
+            ImGui::EndMenu();
+        }
+
+        ImGui::EndMainMenuBar();
+    }
+}
+
 void frame(GamepadPtr &gamepad, ControllerState &controllerState, CompetitionState &competitionState)
 {
-    ImGui::SetNextWindowSize(ImVec2(800, 520), ImGuiCond_FirstUseEver);
-    if (ImGui::Begin(std::format("Controller - {0}###Controller", gamepad ? SDL_GetGamepadName(gamepad.get()) : "Not Connected").c_str(), nullptr))
-    {
-        DrawController(controllerState);
-    }
-    ImGui::End();
+    DrawMenuBar();
 
-    ImGui::SetNextWindowSize(ImVec2(400, 820), ImGuiCond_FirstUseEver);
-    if (ImGui::Begin("Key Bindings", nullptr))
+    if (showControllerWindow)
     {
-        DrawKeyBindings();
+        ImGui::SetNextWindowSize(ImVec2(800, 520), ImGuiCond_FirstUseEver);
+        if (ImGui::Begin(std::format("Controller - {0}###Controller", gamepad ? SDL_GetGamepadName(gamepad.get()) : "Not Connected").c_str(), &showControllerWindow))
+        {
+            DrawController(controllerState);
+        }
+        ImGui::End();
     }
-    ImGui::End();
 
-    ImGui::SetNextWindowSize(ImVec2(400, 200), ImGuiCond_FirstUseEver);
-    if (ImGui::Begin("Competition State", nullptr))
+    if (showKeyBindingsWindow)
     {
-        DrawCompetitionState(competitionState);
+        ImGui::SetNextWindowSize(ImVec2(400, 820), ImGuiCond_FirstUseEver);
+        if (ImGui::Begin("Key Bindings", &showKeyBindingsWindow))
+        {
+            DrawKeyBindings();
+        }
+        ImGui::End();
     }
-    ImGui::End();
+
+    if (showCompetitionStateWindow)
+    {
+        ImGui::SetNextWindowSize(ImVec2(400, 200), ImGuiCond_FirstUseEver);
+        if (ImGui::Begin("Competition State", &showCompetitionStateWindow))
+        {
+            DrawCompetitionState(competitionState);
+        }
+        ImGui::End();
+    }
+
+    if (showDeviceListWindow)
+    {
+        ImGui::SetNextWindowSize(ImVec2(400, 400), ImGuiCond_FirstUseEver);
+        if (ImGui::Begin("Device List", &showDeviceListWindow))
+        {
+#ifdef AS_LIBRARY
+            V5_DeviceT devices = vexDevicesGet();
+#else
+            V5_DeviceT devices = nullptr;
+#endif
+
+            DrawDeviceList(devices);
+        }
+        ImGui::End();
+    }
 }
 
 int runGui()
