@@ -625,10 +625,12 @@ int32_t vexSimDeviceMotorUpdateAndGetMotorVoltage(V5_DeviceT device)
     case kMotorControlModeOFF:
     case kMotorControlModeBRAKE:
     case kMotorControlModeHOLD:
-        voltage = device->motor.voltageTarget < -voltageLimit ? -voltageLimit : device->motor.voltageTarget > voltageLimit ? voltageLimit
-                                                                                                                           : device->motor.voltageTarget;
+        voltage = device->motor.voltageTarget;
         break;
     }
+
+    voltage = voltage < -voltageLimit ? -voltageLimit : voltage > voltageLimit ? voltageLimit
+                                                                               : voltage;
 
     device->motor.motorVoltage = voltage;
 
